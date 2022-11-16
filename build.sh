@@ -1,1 +1,1 @@
-g++ ./src/main.cpp -o ./build/huff
+ g++ ./src/main.cpp -Wall -std=c++14 -o ./build/huff
