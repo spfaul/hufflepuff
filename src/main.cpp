@@ -80,12 +80,11 @@ void write_textdata(BitWriter* bw, std::unordered_map<char, std::string>* tree_m
 }
 
 void compress(std::ifstream &in_fhandler, std::ofstream &out_fhandler) {
-    char c;
-    std::unordered_map<char, int> freq_table; 
     // construct freq table
+    std::unordered_map<char, int> freq_table; 
     in_fhandler.seekg(0);
     while (in_fhandler.peek() != EOF) {
-        c = in_fhandler.get();
+        char c = in_fhandler.get();
         freq_table[c]++;
     }
     // populate min heap
