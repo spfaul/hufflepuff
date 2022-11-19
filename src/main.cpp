@@ -30,6 +30,7 @@ struct BitWriter {
     BitWriter(std::ofstream& out_f) : out_fhandler(out_f) {}
 
     void write_bit(unsigned char bit) {
+        std::cout << (int) bit << std::endl;
         output_byte <<= 1;
         if (bit) output_byte |= 1;
         bit_count++;
@@ -47,6 +48,30 @@ struct BitWriter {
 
     void flush() {
         while (bit_count > 0) write_bit(0);
+    }
+};
+
+
+struct BitReader {
+    std::ifstream& in_fhandler;
+    char input_byte = 0;
+    unsigned int bit_count = 0;
+
+    BitReader(std::ifstream& in_f) : in_fhandler(in_f) {}
+
+    unsigned int read_bit() {
+        // def could be refactored more simply
+        if (bit_count == 8) // last bit has been read, reset bit_count
+            bit_count = 0;
+        // get next char (8 bits)
+        if (bit_count == 0) {
+            input_byte = in_fhandler.get();
+            if (input_byte == EOF)
+                return 2;
+        } 
+        unsigned int b = (input_byte >> (7-bit_count)) & 0x01;
+        bit_count++;
+        return b;
     }
 };
 
@@ -76,6 +101,17 @@ void write_textdata(BitWriter* bw, std::unordered_map<char, std::string>* tree_m
         std::string path = (*tree_map)[in_stream.get()];
         for (char c: path)
             bw->write_bit(c - '0');
+    }
+}
+
+
+void decompress(std::ifstream &in_fhandler, std::ofstream &out_fhandler) {
+    // construct huff tree
+    BitReader* br = new BitReader(in_fhandler);
+    unsigned int bit;
+    while (bit != 2) {
+        bit = br->read_bit();
+        std::cout << bit << std::endl;
     }
 }
 
@@ -114,14 +150,23 @@ void compress(std::ifstream &in_fhandler, std::ofstream &out_fhandler) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3)
-        throw std::invalid_argument("Accepts 2 positional arguments - [INPUT_FILE_PATH] [OUTPUT_FILE_PATH]");
+    if (argc != 4)
+        throw std::invalid_argument("Accepts 3 positional arguments - [cp OR dcp] [INPUT_FILE_PATH] [OUTPUT_FILE_PATH]");
     std::ifstream in_fhandler;
     std::ofstream out_fhandler;
-    in_fhandler.open(argv[1]);
-    out_fhandler.open(argv[2]);
-    if (in_fhandler.is_open())
+    in_fhandler.open(argv[2]);
+    out_fhandler.open(argv[3]);
+    if (!in_fhandler.is_open() || !out_fhandler.is_open()) {
+        throw std::runtime_error("Error opening input/output files: check file permissions and path");        
+    }
+    std::string procedure = argv[1];
+    if (procedure == "cp")
         compress(in_fhandler, out_fhandler);
+    else if (procedure == "dcp")
+        decompress(in_fhandler, out_fhandler);
+    else
+        throw std::invalid_argument("Invalid 1st argument: accepts \"cp\" (compress) or \"dcp\" (decompress)");
+        
     in_fhandler.close();
     out_fhandler.close();
     return 0;
